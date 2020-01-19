@@ -1,0 +1,21 @@
+# Parameters for time, randomness, environment, etc.
+dt: 0.001
+seed: -1 # negative forces random seed
+
+enable_wind: true # Turn wind on and off (random seed randomly initializes wind)
+wind_init_vector: [-6, 6, 1] # Initial wind vector if not initialized randomly
+wind_north_init_stdev: 6.0 # Variation on the initial north wind component
+wind_east_init_stdev: 6.0 # Variation on the initial east wind component
+wind_down_init_stdev: 1.0 # Variation on the initial down wind component
+wind_north_walk_stdev: 5.0 # Amount of random walk in north wind component
+wind_east_walk_stdev: 5.0 # Amount of random walk in east wind component
+wind_down_walk_stdev: 1.0 # Amount of random walk in down wind component
+
+grid_cell_fraction: 0.2 # Grid cell fraction of image size (smaller fraction = more image features)
+landmark_depth_variation: 1.0 # Maximum variation in depth of generated landmarks (m)
+north_dim: 2000 # Total box length in north dimension (m)
+east_dim: 2000 # Total box length in east dimension (m)
+height_dim: 500 # Total box height dimension (m)
+
+logname_landmarks: /tmp/landmarks.log
+logname_wind: /tmp/wind.log

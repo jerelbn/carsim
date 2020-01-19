@@ -25,24 +25,24 @@ class GLanimator
 public:
 
     GLanimator();
+    GLanimator(const double& _x_min, const double& _x_max,
+			   const double& _y_min, const double& _y_max);
 
-    void drawScene();
     void initRendering();
     void resizeWindow(int w, int h);
-    void myKeyboardFunc(unsigned char key, int x, int y);
-    void mySpecialKeyFunc(int key, int x, int y);
+    void drawScene(double& t, const double& dt, const double& px, const double& py, const double& psi);
+    void myKeyboardFunc(unsigned char key, double& t, const double& dt, const double& px, const double& py, const double& psi);
+    void mySpecialKeyFunc(int key, double& force, double& torque, const double& max_force, const double& max_torque);
 
 private:
 
-    int RunMode;		// Used as a boolean (1 or 0) for "on" and "off"
-
-	// The next global variable controls the animation's state and speed.
-	float CurrentAngle;			// Angle in degrees
-	float AnimateStep;			// Rotation step per update
+    int run_mode; // Toggle between step by step drawing or real time
 
 	// These variables set the dimensions of the rectanglar region we wish to view.
-	const double Xmin, Xmax;
-	const double Ymin, Ymax;
+	const double x_min = 0;
+    const double x_max = 1;
+	const double y_min = 0;
+    const double y_max = 1;
 
 };
 
