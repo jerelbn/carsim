@@ -10,16 +10,19 @@ set(CMAKE_CXX_FLAGS "-std=c++11")
 find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
 
-add_subdirectory(lib/common_cpp)
+add_library(common_cpp INTERFACE)
  
 include_directories(include
-    lib/common_cpp/include
     ${OPENGL_INCLUDE_DIRS}
     ${GLUT_INCLUDE_DIRS}
 )
 
-add_executable(SimpleAnim src/SimpleAnim.cpp)
-target_link_libraries(SimpleAnim
+add_executable(glanimator
+    src/main.cpp
+    src/glanimator.cpp
+)
+target_link_libraries(glanimator
+    common_cpp
     ${OPENGL_LIBRARIES}
     ${GLUT_LIBRARIES}
 )

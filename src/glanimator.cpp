@@ -28,67 +28,31 @@
  *
  */
 
+#include <functional>
 #include <math.h>		// For math routines (such as sqrt & trig).
 #include <stdio.h>
 #include <stdlib.h>		// For the "exit" function
 #include <GL/glut.h>	// OpenGL Graphics Utility Library
-#include "SimpleAnim.h"
+#include "glanimator.h"
 
-int RunMode = 1;		// Used as a boolean (1 or 0) for "on" and "off"
 
-// The next global variable controls the animation's state and speed.
-float CurrentAngle = 0.0f;			// Angle in degrees
-float AnimateStep = 3.0f;			// Rotation step per update
-
-// These variables set the dimensions of the rectanglar region we wish to view.
-const double Xmin = 0.0, Xmax = 3.0;
-const double Ymin = 0.0, Ymax = 3.0;
-
-// glutKeyboardFunc is called below to set this function to handle
-//		all "normal" key presses.
-void myKeyboardFunc( unsigned char key, int x, int y )
+namespace glanimator
 {
-	switch ( key ) {
-	case 'r':
-		RunMode = 1-RunMode;		// Toggle to opposite value
-		if ( RunMode==1 ) {
-			glutPostRedisplay();
-		}
-		break;
-	case 's':
-		RunMode = 1;
-		drawScene();
-		RunMode = 0;
-		break;
-	case 27:	// Escape key
-		exit(1);
-	}
+
+
+GLanimator::GLanimator() : Xmin(0.0), Xmax(3.0), Ymin(0.0), Ymax(3.0)
+{
+	RunMode = 1;
+	CurrentAngle = 0.0;
+	AnimateStep = 1.0 * M_PI / 180.0;
 }
 
-// glutSpecialFunc is called below to set this function to handle
-//		all "special" key presses.  See glut.h for the names of
-//		special keys.
-void mySpecialKeyFunc( int key, int x, int y )
-{
-	switch ( key ) {
-	case GLUT_KEY_UP:		
-		if ( AnimateStep < 1.0e3) {			// Avoid overflow problems
-			AnimateStep *= sqrt(2.0);		// Increase the angle increment
-		}
-		break;
-	case GLUT_KEY_DOWN:
-		if (AnimateStep>1.0e-6) {		// Avoid underflow problems.
-			AnimateStep /= sqrt(2.0);	// Decrease the angle increment
-		}
-		break;
-	}
-}
 
 /*
  * drawScene() handles the animation and the redrawing of the
  *		graphics window contents.
  */
-void drawScene(void)
+void GLanimator::drawScene()
 {
 	// Clear the rendering window
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -133,19 +97,20 @@ void drawScene(void)
 	if ( RunMode==1 ) {
 		glutPostRedisplay();	// Trigger an automatic redraw for animation
 	}
-
 }
+
 
 // Initialize OpenGL's rendering modes
-void initRendering()
+void GLanimator::initRendering()
 {
-    glShadeModel( GL_FLAT );	// The default value of GL_SMOOTH is usually better
-    glEnable( GL_DEPTH_TEST );	// Depth testing must be turned on
+    glShadeModel(GL_FLAT);	// The default value of GL_SMOOTH is usually better
+    glEnable(GL_DEPTH_TEST);	// Depth testing must be turned on
 }
+
 
 // Called when the window is resized
 //		w, h - width and height of the window in pixels.
-void resizeWindow(int w, int h)
+void GLanimator::resizeWindow(int w, int h)
 {
 	double scale, center;
 	double windowXmin, windowXmax, windowYmin, windowYmax;
@@ -182,44 +147,49 @@ void resizeWindow(int w, int h)
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
     glOrtho( windowXmin, windowXmax, windowYmin, windowYmax, -1, 1 );
-
 }
 
 
-// Main routine
-// Set up OpenGL, define the callbacks and start the main loop
-int main( int argc, char** argv )
+// glutKeyboardFunc is called below to set this function to handle
+//		all "normal" key presses.
+void GLanimator::myKeyboardFunc( unsigned char key, int x, int y )
 {
-	glutInit(&argc,argv);
-
-	// We're going to animate it, so double buffer 
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH );
-
-	// Window position (from top corner), and size (width% and hieght)
-    glutInitWindowPosition( 10, 60 );
-    glutInitWindowSize( 360, 360 );
-    glutCreateWindow( "SimpleAnim" );
-
-	// Initialize OpenGL as we like it..
-    initRendering();
-
-	// Set up callback functions for key presses
-	glutKeyboardFunc( myKeyboardFunc );			// Handles "normal" ascii symbols
-	glutSpecialFunc( mySpecialKeyFunc );		// Handles "special" keyboard keys
-
-	// Set up the callback function for resizing windows
-    glutReshapeFunc( resizeWindow );
-
-	// Call this for background processing
-	// glutIdleFunc( myIdleFunction );
-
-	// call this whenever window needs redrawing
-    glutDisplayFunc( drawScene );
-
-	fprintf(stdout, "Arrow keys control speed.  Press \"r\" to run,  \"s\" to single step.\n");
-	
-	// Start the main loop.  glutMainLoop never returns.
-	glutMainLoop(  );
-
-    return(0);	// This line is never reached.
+	switch ( key ) {
+	case 'r':
+		RunMode = 1-RunMode;		// Toggle to opposite value
+		if ( RunMode==1 ) {
+			glutPostRedisplay();
+		}
+		break;
+	case 's':
+		RunMode = 1;
+		drawScene();
+		RunMode = 0;
+		break;
+	case 27:	// Escape key
+		exit(1);
+	}
 }
+
+
+// glutSpecialFunc is called below to set this function to handle
+//		all "special" key presses.  See glut.h for the names of
+//		special keys.
+void GLanimator::mySpecialKeyFunc( int key, int x, int y )
+{
+	switch ( key ) {
+	case GLUT_KEY_UP:		
+		if ( AnimateStep < 360.0 * M_PI / 180.0) {			// Avoid overflow problems
+			AnimateStep += 1.0 * M_PI / 180.0;		// Increase the angle increment
+		}
+		break;
+	case GLUT_KEY_DOWN:
+		if (AnimateStep > 1.0 * M_PI / 180.0) {		// Avoid underflow problems.
+			AnimateStep -= 1.0 * M_PI / 180.0;	// Decrease the angle increment
+		}
+		break;
+	}
+}
+
+
+} // namespace glanimator
