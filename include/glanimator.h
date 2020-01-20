@@ -44,6 +44,11 @@ private:
 	const double y_min = 0;
     const double y_max = 1;
 
+    // Car dimensions
+    const double scale_factor = 1.0;
+    const double car_width = 2.0;
+    const double car_length = 4.0;
+
 };
 
 

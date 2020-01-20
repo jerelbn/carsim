@@ -12,9 +12,9 @@ x0: [0, # NORTH
 mass: 1.0
 inertia: 0.1
 length: 1.5
-drag: 0.1
-max_force: 100.0
-max_torque: 10.0
+drag: 0.01
+max_force: 2000.0
+max_torque: 20.0
 max_steering_angle: 0.78
 
 k_u: 5.0

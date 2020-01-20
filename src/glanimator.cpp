@@ -34,6 +34,7 @@
 #include <stdlib.h>		// For the "exit" function
 #include <GL/glut.h>	// OpenGL Graphics Utility Library
 #include "glanimator.h"
+#include "common_cpp/transform.h"
 
 
 namespace glanimator
@@ -122,16 +123,43 @@ void GLanimator::drawScene(double& t, const double& dt, const double& px, const 
 	// Rotate the image
 	glMatrixMode(GL_MODELVIEW);			// Current matrix affects objects positions
 	glLoadIdentity();						// Initialize to the identity
-	glTranslatef( 1.5, 1.5, 0.0 );					// Translate rotation center from origin
-	glRotatef( 0.0, 0.0, 0.0, 1.0 );		// Rotate through animation angle
-	glTranslatef( -1.5, -1.5, 0.0 );				// Translate rotation center to origin
+	// glTranslatef( 1.5, 1.5, 0.0 );					// Translate rotation center from origin
+	// glRotatef( 0.0, 0.0, 0.0, 1.0 );		// Rotate through animation angle
+	// glTranslatef( -1.5, -1.5, 0.0 );				// Translate rotation center to origin
 
-	// Draw three overlapping triangles of different colors
-	glBegin( GL_TRIANGLES );
-	glColor3f( 1.0, 0.0, 0.0 );
-	glVertex3f( 0.3, 1.0, 0.5 );
-	glVertex3f( 2.7, 0.85, 0.0 );
-	glVertex3f( 2.7, 1.15, 0.0 );
+	// Define body and tire vertices in GL frame at identity
+	static const Eigen::Vector3d body_fl_sq( 0.1*car_length,  0.5*car_width, 0.0); // body front-left square
+	static const Eigen::Vector3d body_fl_tr( 0.5*car_length,  0.3*car_width, 0.0); // body front-left trapezoid
+	static const Eigen::Vector3d body_fr_tr( 0.5*car_length, -0.3*car_width, 0.0); // body front-right trapezoid
+	static const Eigen::Vector3d body_fr_sq( 0.1*car_length, -0.5*car_width, 0.0); // body front-right square
+	static const Eigen::Vector3d body_rr_sq(-0.3*car_length, -0.5*car_width, 0.0); // body rear-right square
+	static const Eigen::Vector3d body_rr_tr(-0.5*car_length, -0.4*car_width, 0.0); // body rear-right trapezoid
+	static const Eigen::Vector3d body_rl_tr(-0.5*car_length,  0.4*car_width, 0.0); // body rear-left trapezoid
+	static const Eigen::Vector3d body_rl_sq(-0.3*car_length,  0.5*car_width, 0.0); // body rear-left square
+
+	// Actively tranform NED car points at identity to current location
+	common::Transformd x_GL_to_b(Eigen::Vector3d(px, py, 0), common::Quaterniond(0, 0, common::wrapAngle(-psi+M_PI/2,M_PI)));
+
+	Eigen::Vector3d body_fl_sq_b = x_GL_to_b.inv().transform(body_fl_sq);
+	Eigen::Vector3d body_fl_tr_b = x_GL_to_b.inv().transform(body_fl_tr);
+	Eigen::Vector3d body_fr_tr_b = x_GL_to_b.inv().transform(body_fr_tr);
+	Eigen::Vector3d body_fr_sq_b = x_GL_to_b.inv().transform(body_fr_sq);
+	Eigen::Vector3d body_rr_sq_b = x_GL_to_b.inv().transform(body_rr_sq);
+	Eigen::Vector3d body_rr_tr_b = x_GL_to_b.inv().transform(body_rr_tr);
+	Eigen::Vector3d body_rl_tr_b = x_GL_to_b.inv().transform(body_rl_tr);
+	Eigen::Vector3d body_rl_sq_b = x_GL_to_b.inv().transform(body_rl_sq);
+
+	// Draw the car - square middle with trapezoid front/rear sections
+	glBegin(GL_POLYGON);
+	glColor3f(1.0, 0.6, 0.2); // orange
+	glVertex3f(body_fl_sq_b(0), body_fl_sq_b(1), body_fl_sq_b(2)); // body front-left square
+	glVertex3f(body_fl_tr_b(0), body_fl_tr_b(1), body_fl_tr_b(2)); // body front-left trapezoid
+	glVertex3f(body_fr_tr_b(0), body_fr_tr_b(1), body_fr_tr_b(2)); // body front-right trapezoid
+	glVertex3f(body_fr_sq_b(0), body_fr_sq_b(1), body_fr_sq_b(2)); // body front-right square
+	glVertex3f(body_rr_sq_b(0), body_rr_sq_b(1), body_rr_sq_b(2)); // body rear-right square
+	glVertex3f(body_rr_tr_b(0), body_rr_tr_b(1), body_rr_tr_b(2)); // body rear-right trapezoid
+	glVertex3f(body_rl_tr_b(0), body_rl_tr_b(1), body_rl_tr_b(2)); // body rear-left trapezoid
+	glVertex3f(body_rl_sq_b(0), body_rl_sq_b(1), body_rl_sq_b(2)); // body rear-left square
 	glEnd();
 
 	// Flush the pipeline, swap the buffers

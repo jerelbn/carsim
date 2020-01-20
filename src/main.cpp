@@ -40,8 +40,8 @@ int main(int argc, char** argv)
     // OpenGL processes
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH );
-    glutInitWindowPosition(10, 60);
-    glutInitWindowSize(360, 360);
+    glutInitWindowPosition(500, 100);
+    glutInitWindowSize(720, 720);
     glutCreateWindow("Car Simulator");
     glanimatorPtr->initRendering();
 	glutKeyboardFunc(myKeyboardFunc);
@@ -66,7 +66,8 @@ void updateSimulationAndDrawScene()
 {
     bicyclePtr->propagate(t);
     glanimatorPtr->drawScene(t, dt, bicyclePtr->y(), bicyclePtr->x(), bicyclePtr->psi());
-    std::cout << "north = " << bicyclePtr->x() << ", east = " << bicyclePtr->y() << ", steer angle = " << bicyclePtr->theta() << std::endl;
+    std::cout << "north = " << bicyclePtr->x() << ", east = " << bicyclePtr->y() 
+              << ", heading = " << bicyclePtr->psi() << ", steer angle = " << bicyclePtr->theta() << std::endl;
 
     // Ensure force/torque is only applied when key is pressed
     bicyclePtr->force() = 0;
