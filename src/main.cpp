@@ -33,7 +33,7 @@ int main(int argc, char** argv)
 
     // Create animator class and give references to pointers for 
     // use in OpenGL's global functions
-    glanimator::GLanimator glanimator(-10, 10, -10, 10);
+    glanimator::GLanimator glanimator("../param/bicycle.yaml");
     glanimatorPtr = &glanimator;
     bicyclePtr = &bicycle;
 
@@ -41,7 +41,7 @@ int main(int argc, char** argv)
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH );
     glutInitWindowPosition(500, 100);
-    glutInitWindowSize(720, 720);
+    glutInitWindowSize(1080, 1080);
     glutCreateWindow("Car Simulator");
     glanimatorPtr->initRendering();
 	glutKeyboardFunc(myKeyboardFunc);
@@ -65,9 +65,8 @@ void resizeWindow(int w, int h)
 void updateSimulationAndDrawScene()
 {
     bicyclePtr->propagate(t);
-    glanimatorPtr->drawScene(t, dt, bicyclePtr->y(), bicyclePtr->x(), bicyclePtr->psi());
-    std::cout << "north = " << bicyclePtr->x() << ", east = " << bicyclePtr->y() 
-              << ", heading = " << bicyclePtr->psi() << ", steer angle = " << bicyclePtr->theta() << std::endl;
+    glanimatorPtr->drawScene(t, dt, bicyclePtr->y(), bicyclePtr->x(), bicyclePtr->psi(), bicyclePtr->theta());
+    std::cout << "t = " << t << std::endl;
 
     // Ensure force/torque is only applied when key is pressed
     bicyclePtr->force() = 0;
@@ -76,7 +75,7 @@ void updateSimulationAndDrawScene()
 
 void myKeyboardFunc(unsigned char key, int x, int y)
 {
-    glanimatorPtr->myKeyboardFunc(key, t, dt, bicyclePtr->y(), bicyclePtr->x(), bicyclePtr->psi());
+    glanimatorPtr->myKeyboardFunc(key, t, dt, bicyclePtr->y(), bicyclePtr->x(), bicyclePtr->psi(), bicyclePtr->theta());
 }
 
 void mySpecialKeyFunc(int key, int x, int y)
