@@ -43,12 +43,14 @@ namespace glanimator
 GLanimator::GLanimator()
 {
 	run_mode = 1;
+	t0 = std::chrono::high_resolution_clock::now();
 }
 
 
 GLanimator::GLanimator(const std::string& filename)
 {
 	run_mode = 1;
+	t0 = std::chrono::high_resolution_clock::now();
 	common::get_yaml_node("length", filename, car_length);
 }
 
@@ -111,114 +113,120 @@ void GLanimator::resizeWindow(int w, int h)
  */
 void GLanimator::drawScene(double& t, const double& dt, const double& px, const double& py, const double& psi, const double& theta)
 {
-	// Clear the rendering window
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	// This controls propagation so that that we can step through the simulation if desired
+    if (run_mode == 1) t += dt;
 
-    if (run_mode == 1)
+	// Draw at real time
+	// WARNING: This breaks as soon as the simulation runs slower than real time!
+	double t_actual = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - t0).count();
+	if (t >= t_actual*1e-6)
 	{
-		t += dt;
+		t_draw_prev = t;
+
+		// Clear the rendering window
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		
+		// Rotate the image
+		glMatrixMode(GL_MODELVIEW);			// Current matrix affects objects positions
+		glLoadIdentity();						// Initialize to the identity
+		// glTranslatef( 1.5, 1.5, 0.0 );					// Translate rotation center from origin
+		// glRotatef( 0.0, 0.0, 0.0, 1.0 );		// Rotate through animation angle
+		// glTranslatef( -1.5, -1.5, 0.0 );				// Translate rotation center to origin
+
+		// Define body and tire vertices in GL frame (x-forward, y-left) at identity
+		static const Eigen::Vector3f body_fl_sq( 0.6*car_length,  0.5*car_width, 0.0); // vertex body front-left square
+		static const Eigen::Vector3f body_fl_tr( 1.0*car_length,  0.3*car_width, 0.0); // vertex body front-left trapezoid
+		static const Eigen::Vector3f body_fr_tr( 1.0*car_length, -0.3*car_width, 0.0); // vertex body front-right trapezoid
+		static const Eigen::Vector3f body_fr_sq( 0.6*car_length, -0.5*car_width, 0.0); // vertex body front-right square
+		static const Eigen::Vector3f body_rr_sq( 0.2*car_length, -0.5*car_width, 0.0); // vertex body rear-right square
+		static const Eigen::Vector3f body_rr_tr( 0.0*car_length, -0.4*car_width, 0.0); // vertex body rear-right trapezoid
+		static const Eigen::Vector3f body_rl_tr( 0.0*car_length,  0.4*car_width, 0.0); // vertex body rear-left trapezoid
+		static const Eigen::Vector3f body_rl_sq( 0.2*car_length,  0.5*car_width, 0.0); // vertex body rear-left square
+		static const Eigen::Vector3f tire_fl( 0.5*tire_length,  0.5*tire_width, 0.0); // vertex tire front-left
+		static const Eigen::Vector3f tire_fr( 0.5*tire_length, -0.5*tire_width, 0.0); // vertex tire front-right
+		static const Eigen::Vector3f tire_rr(-0.5*tire_length, -0.5*tire_width, 0.0); // vertex tire rear-right
+		static const Eigen::Vector3f tire_rl(-0.5*tire_length,  0.5*tire_width, 0.0); // vertex tire rear-left
+		static const Eigen::Vector3f tire_center_fl( 1.0*car_length,  0.5*car_width, 0.0); // tire center front-left
+		static const Eigen::Vector3f tire_center_fr( 1.0*car_length, -0.5*car_width, 0.0); // tire center front-right
+		static const Eigen::Vector3f tire_center_rr( 0.0*car_length, -0.5*car_width, 0.0); // tire center rear-right
+		static const Eigen::Vector3f tire_center_rl( 0.0*car_length,  0.5*car_width, 0.0); // tire center rear-left
+
+		// Actively tranform all vertices to align with simulation
+		common::Transformf x_GL_to_b(Eigen::Vector3f(px, py, 0), common::Quaternionf(0, 0, common::wrapAngle(-psi+M_PI/2,M_PI)));
+		common::Quaternionf q_theta(0, 0, theta);
+
+		Eigen::Vector3f body_fl_sq_b = x_GL_to_b.inv().transform(body_fl_sq);
+		Eigen::Vector3f body_fl_tr_b = x_GL_to_b.inv().transform(body_fl_tr);
+		Eigen::Vector3f body_fr_tr_b = x_GL_to_b.inv().transform(body_fr_tr);
+		Eigen::Vector3f body_fr_sq_b = x_GL_to_b.inv().transform(body_fr_sq);
+		Eigen::Vector3f body_rr_sq_b = x_GL_to_b.inv().transform(body_rr_sq);
+		Eigen::Vector3f body_rr_tr_b = x_GL_to_b.inv().transform(body_rr_tr);
+		Eigen::Vector3f body_rl_tr_b = x_GL_to_b.inv().transform(body_rl_tr);
+		Eigen::Vector3f body_rl_sq_b = x_GL_to_b.inv().transform(body_rl_sq);
+		Eigen::Vector3f tire_fl_fl_b = x_GL_to_b.inv().transform(tire_center_fl+q_theta.rot(tire_fl));
+		Eigen::Vector3f tire_fl_fr_b = x_GL_to_b.inv().transform(tire_center_fl+q_theta.rot(tire_fr));
+		Eigen::Vector3f tire_fl_rr_b = x_GL_to_b.inv().transform(tire_center_fl+q_theta.rot(tire_rr));
+		Eigen::Vector3f tire_fl_rl_b = x_GL_to_b.inv().transform(tire_center_fl+q_theta.rot(tire_rl));
+		Eigen::Vector3f tire_fr_fl_b = x_GL_to_b.inv().transform(tire_center_fr+q_theta.rot(tire_fl));
+		Eigen::Vector3f tire_fr_fr_b = x_GL_to_b.inv().transform(tire_center_fr+q_theta.rot(tire_fr));
+		Eigen::Vector3f tire_fr_rr_b = x_GL_to_b.inv().transform(tire_center_fr+q_theta.rot(tire_rr));
+		Eigen::Vector3f tire_fr_rl_b = x_GL_to_b.inv().transform(tire_center_fr+q_theta.rot(tire_rl));
+		Eigen::Vector3f tire_rr_fl_b = x_GL_to_b.inv().transform(tire_center_rr+tire_fl);
+		Eigen::Vector3f tire_rr_fr_b = x_GL_to_b.inv().transform(tire_center_rr+tire_fr);
+		Eigen::Vector3f tire_rr_rr_b = x_GL_to_b.inv().transform(tire_center_rr+tire_rr);
+		Eigen::Vector3f tire_rr_rl_b = x_GL_to_b.inv().transform(tire_center_rr+tire_rl);
+		Eigen::Vector3f tire_rl_fl_b = x_GL_to_b.inv().transform(tire_center_rl+tire_fl);
+		Eigen::Vector3f tire_rl_fr_b = x_GL_to_b.inv().transform(tire_center_rl+tire_fr);
+		Eigen::Vector3f tire_rl_rr_b = x_GL_to_b.inv().transform(tire_center_rl+tire_rr);
+		Eigen::Vector3f tire_rl_rl_b = x_GL_to_b.inv().transform(tire_center_rl+tire_rl);
+
+		// Draw the car - square middle with trapezoid front/rear sections
+		glBegin(GL_POLYGON);
+		glColor3f(1.0, 0.6, 0.2); // orange
+		glVertex3f(body_fl_sq_b(0), body_fl_sq_b(1), body_fl_sq_b(2)); // vertex front-left square
+		glVertex3f(body_fl_tr_b(0), body_fl_tr_b(1), body_fl_tr_b(2)); // vertex front-left trapezoid
+		glVertex3f(body_fr_tr_b(0), body_fr_tr_b(1), body_fr_tr_b(2)); // vertex front-right trapezoid
+		glVertex3f(body_fr_sq_b(0), body_fr_sq_b(1), body_fr_sq_b(2)); // vertex front-right square
+		glVertex3f(body_rr_sq_b(0), body_rr_sq_b(1), body_rr_sq_b(2)); // vertex rear-right square
+		glVertex3f(body_rr_tr_b(0), body_rr_tr_b(1), body_rr_tr_b(2)); // vertex rear-right trapezoid
+		glVertex3f(body_rl_tr_b(0), body_rl_tr_b(1), body_rl_tr_b(2)); // vertex rear-left trapezoid
+		glVertex3f(body_rl_sq_b(0), body_rl_sq_b(1), body_rl_sq_b(2)); // vertex rear-left square
+		glEnd();
+
+		// Draw the tires
+		glBegin(GL_POLYGON); // front-left
+		glColor3f(0.6, 0.6, 0.6);
+		glVertex3f(tire_fl_fl_b(0), tire_fl_fl_b(1), tire_fl_fl_b(2)); // vertex front-left
+		glVertex3f(tire_fl_fr_b(0), tire_fl_fr_b(1), tire_fl_fr_b(2)); // vertex front-right
+		glVertex3f(tire_fl_rr_b(0), tire_fl_rr_b(1), tire_fl_rr_b(2)); // vertex rear-right
+		glVertex3f(tire_fl_rl_b(0), tire_fl_rl_b(1), tire_fl_rl_b(2)); // vertex rear-left
+		glEnd();
+		glBegin(GL_POLYGON); // front-right
+		glColor3f(0.6, 0.6, 0.6);
+		glVertex3f(tire_fr_fl_b(0), tire_fr_fl_b(1), tire_fr_fl_b(2)); // vertex front-left
+		glVertex3f(tire_fr_fr_b(0), tire_fr_fr_b(1), tire_fr_fr_b(2)); // vertex front-right
+		glVertex3f(tire_fr_rr_b(0), tire_fr_rr_b(1), tire_fr_rr_b(2)); // vertex rear-right
+		glVertex3f(tire_fr_rl_b(0), tire_fr_rl_b(1), tire_fr_rl_b(2)); // vertex rear-left
+		glEnd();
+		glBegin(GL_POLYGON); // rear-right
+		glColor3f(0.6, 0.6, 0.6);
+		glVertex3f(tire_rr_fl_b(0), tire_rr_fl_b(1), tire_rr_fl_b(2)); // vertex front-left
+		glVertex3f(tire_rr_fr_b(0), tire_rr_fr_b(1), tire_rr_fr_b(2)); // vertex front-right
+		glVertex3f(tire_rr_rr_b(0), tire_rr_rr_b(1), tire_rr_rr_b(2)); // vertex rear-right
+		glVertex3f(tire_rr_rl_b(0), tire_rr_rl_b(1), tire_rr_rl_b(2)); // vertex rear-left
+		glEnd();
+		glBegin(GL_POLYGON); // rear-left
+		glColor3f(0.6, 0.6, 0.6);
+		glVertex3f(tire_rl_fl_b(0), tire_rl_fl_b(1), tire_rl_fl_b(2)); // vertex front-left
+		glVertex3f(tire_rl_fr_b(0), tire_rl_fr_b(1), tire_rl_fr_b(2)); // vertex front-right
+		glVertex3f(tire_rl_rr_b(0), tire_rl_rr_b(1), tire_rl_rr_b(2)); // vertex rear-right
+		glVertex3f(tire_rl_rl_b(0), tire_rl_rl_b(1), tire_rl_rl_b(2)); // vertex rear-left
+		glEnd();
+
+		// Flush the pipeline, swap the buffers
+		glFlush();
+		glutSwapBuffers();
 	}
-	
-	// Rotate the image
-	glMatrixMode(GL_MODELVIEW);			// Current matrix affects objects positions
-	glLoadIdentity();						// Initialize to the identity
-	// glTranslatef( 1.5, 1.5, 0.0 );					// Translate rotation center from origin
-	// glRotatef( 0.0, 0.0, 0.0, 1.0 );		// Rotate through animation angle
-	// glTranslatef( -1.5, -1.5, 0.0 );				// Translate rotation center to origin
-
-	// Define body and tire vertices in GL frame (x-forward, y-left) at identity
-	static const Eigen::Vector3f body_fl_sq( 0.6*car_length,  0.5*car_width, 0.0); // vertex body front-left square
-	static const Eigen::Vector3f body_fl_tr( 1.0*car_length,  0.3*car_width, 0.0); // vertex body front-left trapezoid
-	static const Eigen::Vector3f body_fr_tr( 1.0*car_length, -0.3*car_width, 0.0); // vertex body front-right trapezoid
-	static const Eigen::Vector3f body_fr_sq( 0.6*car_length, -0.5*car_width, 0.0); // vertex body front-right square
-	static const Eigen::Vector3f body_rr_sq( 0.2*car_length, -0.5*car_width, 0.0); // vertex body rear-right square
-	static const Eigen::Vector3f body_rr_tr( 0.0*car_length, -0.4*car_width, 0.0); // vertex body rear-right trapezoid
-	static const Eigen::Vector3f body_rl_tr( 0.0*car_length,  0.4*car_width, 0.0); // vertex body rear-left trapezoid
-	static const Eigen::Vector3f body_rl_sq( 0.2*car_length,  0.5*car_width, 0.0); // vertex body rear-left square
-	static const Eigen::Vector3f tire_fl( 0.5*tire_length,  0.5*tire_width, 0.0); // vertex tire front-left
-	static const Eigen::Vector3f tire_fr( 0.5*tire_length, -0.5*tire_width, 0.0); // vertex tire front-right
-	static const Eigen::Vector3f tire_rr(-0.5*tire_length, -0.5*tire_width, 0.0); // vertex tire rear-right
-	static const Eigen::Vector3f tire_rl(-0.5*tire_length,  0.5*tire_width, 0.0); // vertex tire rear-left
-	static const Eigen::Vector3f tire_center_fl( 1.0*car_length,  0.5*car_width, 0.0); // tire center front-left
-	static const Eigen::Vector3f tire_center_fr( 1.0*car_length, -0.5*car_width, 0.0); // tire center front-right
-	static const Eigen::Vector3f tire_center_rr( 0.0*car_length, -0.5*car_width, 0.0); // tire center rear-right
-	static const Eigen::Vector3f tire_center_rl( 0.0*car_length,  0.5*car_width, 0.0); // tire center rear-left
-
-	// Actively tranform all vertices to align with simulation
-	common::Transformf x_GL_to_b(Eigen::Vector3f(px, py, 0), common::Quaternionf(0, 0, common::wrapAngle(-psi+M_PI/2,M_PI)));
-	common::Quaternionf q_theta(0, 0, theta);
-
-	Eigen::Vector3f body_fl_sq_b = x_GL_to_b.inv().transform(body_fl_sq);
-	Eigen::Vector3f body_fl_tr_b = x_GL_to_b.inv().transform(body_fl_tr);
-	Eigen::Vector3f body_fr_tr_b = x_GL_to_b.inv().transform(body_fr_tr);
-	Eigen::Vector3f body_fr_sq_b = x_GL_to_b.inv().transform(body_fr_sq);
-	Eigen::Vector3f body_rr_sq_b = x_GL_to_b.inv().transform(body_rr_sq);
-	Eigen::Vector3f body_rr_tr_b = x_GL_to_b.inv().transform(body_rr_tr);
-	Eigen::Vector3f body_rl_tr_b = x_GL_to_b.inv().transform(body_rl_tr);
-	Eigen::Vector3f body_rl_sq_b = x_GL_to_b.inv().transform(body_rl_sq);
-	Eigen::Vector3f tire_fl_fl_b = x_GL_to_b.inv().transform(tire_center_fl+q_theta.rot(tire_fl));
-	Eigen::Vector3f tire_fl_fr_b = x_GL_to_b.inv().transform(tire_center_fl+q_theta.rot(tire_fr));
-	Eigen::Vector3f tire_fl_rr_b = x_GL_to_b.inv().transform(tire_center_fl+q_theta.rot(tire_rr));
-	Eigen::Vector3f tire_fl_rl_b = x_GL_to_b.inv().transform(tire_center_fl+q_theta.rot(tire_rl));
-	Eigen::Vector3f tire_fr_fl_b = x_GL_to_b.inv().transform(tire_center_fr+q_theta.rot(tire_fl));
-	Eigen::Vector3f tire_fr_fr_b = x_GL_to_b.inv().transform(tire_center_fr+q_theta.rot(tire_fr));
-	Eigen::Vector3f tire_fr_rr_b = x_GL_to_b.inv().transform(tire_center_fr+q_theta.rot(tire_rr));
-	Eigen::Vector3f tire_fr_rl_b = x_GL_to_b.inv().transform(tire_center_fr+q_theta.rot(tire_rl));
-	Eigen::Vector3f tire_rr_fl_b = x_GL_to_b.inv().transform(tire_center_rr+tire_fl);
-	Eigen::Vector3f tire_rr_fr_b = x_GL_to_b.inv().transform(tire_center_rr+tire_fr);
-	Eigen::Vector3f tire_rr_rr_b = x_GL_to_b.inv().transform(tire_center_rr+tire_rr);
-	Eigen::Vector3f tire_rr_rl_b = x_GL_to_b.inv().transform(tire_center_rr+tire_rl);
-	Eigen::Vector3f tire_rl_fl_b = x_GL_to_b.inv().transform(tire_center_rl+tire_fl);
-	Eigen::Vector3f tire_rl_fr_b = x_GL_to_b.inv().transform(tire_center_rl+tire_fr);
-	Eigen::Vector3f tire_rl_rr_b = x_GL_to_b.inv().transform(tire_center_rl+tire_rr);
-	Eigen::Vector3f tire_rl_rl_b = x_GL_to_b.inv().transform(tire_center_rl+tire_rl);
-
-	// Draw the car - square middle with trapezoid front/rear sections
-	glBegin(GL_POLYGON);
-	glColor3f(1.0, 0.6, 0.2); // orange
-	glVertex3f(body_fl_sq_b(0), body_fl_sq_b(1), body_fl_sq_b(2)); // vertex front-left square
-	glVertex3f(body_fl_tr_b(0), body_fl_tr_b(1), body_fl_tr_b(2)); // vertex front-left trapezoid
-	glVertex3f(body_fr_tr_b(0), body_fr_tr_b(1), body_fr_tr_b(2)); // vertex front-right trapezoid
-	glVertex3f(body_fr_sq_b(0), body_fr_sq_b(1), body_fr_sq_b(2)); // vertex front-right square
-	glVertex3f(body_rr_sq_b(0), body_rr_sq_b(1), body_rr_sq_b(2)); // vertex rear-right square
-	glVertex3f(body_rr_tr_b(0), body_rr_tr_b(1), body_rr_tr_b(2)); // vertex rear-right trapezoid
-	glVertex3f(body_rl_tr_b(0), body_rl_tr_b(1), body_rl_tr_b(2)); // vertex rear-left trapezoid
-	glVertex3f(body_rl_sq_b(0), body_rl_sq_b(1), body_rl_sq_b(2)); // vertex rear-left square
-	glEnd();
-
-	// Draw the tires
-	glBegin(GL_POLYGON); // front-left
-	glColor3f(0.6, 0.6, 0.6);
-	glVertex3f(tire_fl_fl_b(0), tire_fl_fl_b(1), tire_fl_fl_b(2)); // vertex front-left
-	glVertex3f(tire_fl_fr_b(0), tire_fl_fr_b(1), tire_fl_fr_b(2)); // vertex front-right
-	glVertex3f(tire_fl_rr_b(0), tire_fl_rr_b(1), tire_fl_rr_b(2)); // vertex rear-right
-	glVertex3f(tire_fl_rl_b(0), tire_fl_rl_b(1), tire_fl_rl_b(2)); // vertex rear-left
-	glEnd();
-	glBegin(GL_POLYGON); // front-right
-	glColor3f(0.6, 0.6, 0.6);
-	glVertex3f(tire_fr_fl_b(0), tire_fr_fl_b(1), tire_fr_fl_b(2)); // vertex front-left
-	glVertex3f(tire_fr_fr_b(0), tire_fr_fr_b(1), tire_fr_fr_b(2)); // vertex front-right
-	glVertex3f(tire_fr_rr_b(0), tire_fr_rr_b(1), tire_fr_rr_b(2)); // vertex rear-right
-	glVertex3f(tire_fr_rl_b(0), tire_fr_rl_b(1), tire_fr_rl_b(2)); // vertex rear-left
-	glEnd();
-	glBegin(GL_POLYGON); // rear-right
-	glColor3f(0.6, 0.6, 0.6);
-	glVertex3f(tire_rr_fl_b(0), tire_rr_fl_b(1), tire_rr_fl_b(2)); // vertex front-left
-	glVertex3f(tire_rr_fr_b(0), tire_rr_fr_b(1), tire_rr_fr_b(2)); // vertex front-right
-	glVertex3f(tire_rr_rr_b(0), tire_rr_rr_b(1), tire_rr_rr_b(2)); // vertex rear-right
-	glVertex3f(tire_rr_rl_b(0), tire_rr_rl_b(1), tire_rr_rl_b(2)); // vertex rear-left
-	glEnd();
-	glBegin(GL_POLYGON); // rear-left
-	glColor3f(0.6, 0.6, 0.6);
-	glVertex3f(tire_rl_fl_b(0), tire_rl_fl_b(1), tire_rl_fl_b(2)); // vertex front-left
-	glVertex3f(tire_rl_fr_b(0), tire_rl_fr_b(1), tire_rl_fr_b(2)); // vertex front-right
-	glVertex3f(tire_rl_rr_b(0), tire_rl_rr_b(1), tire_rl_rr_b(2)); // vertex rear-right
-	glVertex3f(tire_rl_rl_b(0), tire_rl_rl_b(1), tire_rl_rl_b(2)); // vertex rear-left
-	glEnd();
-
-	// Flush the pipeline, swap the buffers
-    glFlush();
-    glutSwapBuffers();
 
 	if (run_mode == 1)
 	{
@@ -234,6 +242,7 @@ void GLanimator::myKeyboardFunc(unsigned char key, double& t, const double& dt, 
 	switch (key)
 	{
 	case 'r':
+		t0 = std::chrono::high_resolution_clock::now() - std::chrono::microseconds(unsigned(t*1e6));
 		run_mode = 1 - run_mode; // Toggle to opposite value
 		if (run_mode == 1)
 		{
@@ -241,6 +250,7 @@ void GLanimator::myKeyboardFunc(unsigned char key, double& t, const double& dt, 
 		}
 		break;
 	case 's':
+		t0 = std::chrono::high_resolution_clock::now() - std::chrono::microseconds(unsigned(t*1e6));
 		run_mode = 1;
 		drawScene(t, dt, px, py, psi, theta);
 		run_mode = 0;

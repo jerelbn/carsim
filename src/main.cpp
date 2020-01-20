@@ -66,7 +66,6 @@ void updateSimulationAndDrawScene()
 {
     bicyclePtr->propagate(t);
     glanimatorPtr->drawScene(t, dt, bicyclePtr->y(), bicyclePtr->x(), bicyclePtr->psi(), bicyclePtr->theta());
-    std::cout << "t = " << t << std::endl;
 
     // Ensure force/torque is only applied when key is pressed
     bicyclePtr->force() = 0;

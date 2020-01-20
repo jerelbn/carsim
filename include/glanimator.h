@@ -15,6 +15,8 @@
  */
 #pragma once
 
+#include <chrono>
+
 
 namespace glanimator
 {
@@ -36,18 +38,20 @@ public:
 private:
 
     int run_mode; // Toggle between step by step drawing or real time
+    double t_draw_prev = -1; // Previous drawing simulation time
+    std::chrono::high_resolution_clock::time_point t0; // Initial time for measuring actual time
 
 	// These variables set the dimensions of the rectanglar region we wish to view.
-	const double x_min = -100.0;
-    const double x_max =  100.0;
-	const double y_min = -100.0;
-    const double y_max =  100.0;
+	const float x_min = -100.0;
+    const float x_max =  100.0;
+	const float y_min = -100.0;
+    const float y_max =  100.0;
 
     // Car dimensions
-    double car_length = 4.0;
-    const double car_width = 0.5*car_length;
-    const double tire_length = 0.3*car_length;
-    const double tire_width = 0.4*tire_length;
+    float car_length = 4.0;
+    const float car_width = 0.5*car_length;
+    const float tire_length = 0.3*car_length;
+    const float tire_width = 0.4*tire_length;
 
 };
 
