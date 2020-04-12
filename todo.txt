@@ -1,0 +1,14 @@
+CarSim ToDo List
+- move bicycle state to separate file
+- change state to use 3D objects
+- change dynamics to 3D
+- pass vector of states to glanimator instead of long list of individual variables
+- create evironment objects - walls, etc.
+- create tree structure for fast searching for objects near the car
+- create IMU sensor
+- create planar LiDAR sensor
+- visualize LiDAR detections
+- estimator fusing IMU and LiDAR data
+- controller
+- path planner
+
